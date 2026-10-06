@@ -1,1 +1,100 @@
 
+name: Update Target JSON
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: "30 18 * * *"
+
+jobs:
+  update-json:
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Google Sheet CSV
+        run: |
+          curl -L \
+          "https://docs.google.com/spreadsheets/d/e/2PACX-1vQpw1n4CDMv99YSitLF6uz7if_ktm1vxc2Z8PgFXQr39e9-VHTh4Jk5YcPAjxcbaL4MsAUXB4QYn1VV/pub?output=csv" \
+          -o sheet.csv
+
+      - name: Convert CSV to JSON
+        run: |
+          python - <<'PY'
+          import csv
+          import json
+
+          users = {}
+
+          with open(
+              "sheet.csv",
+              newline="",
+              encoding="utf-8-sig"
+          ) as file:
+
+              reader = csv.DictReader(file)
+
+              for row in reader:
+
+                  userid = str(
+                      row.get("userid", "")
+                  ).strip()
+
+                  if not userid:
+                      continue
+
+                  try:
+                      target = float(
+                          row.get("target", "") or 0
+                      )
+                  except:
+                      target = 0
+
+                  try:
+                      achievement = float(
+                          row.get("achievement", "") or 0
+                      )
+                  except:
+                      achievement = 0
+
+                  users[userid] = {
+                      "target": target,
+                      "achievement": achievement
+                  }
+
+          with open(
+              "data.json",
+              "w",
+              encoding="utf-8"
+          ) as file:
+
+              json.dump(
+                  users,
+                  file,
+                  indent=2
+              )
+          PY
+
+      - name: Commit updated JSON
+        run: |
+
+          git config user.name \
+            "github-actions[bot]"
+
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add data.json
+
+          git diff --cached --quiet || \
+            git commit -m "Update target data"
+
+          git push
