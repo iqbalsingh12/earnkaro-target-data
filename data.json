@@ -1,1 +1,11 @@
 
+{
+  "1001": {
+    "target": 30000,
+    "achievement": 18500
+  },
+  "1002": {
+    "target": 50000,
+    "achievement": 32000
+  }
+}
